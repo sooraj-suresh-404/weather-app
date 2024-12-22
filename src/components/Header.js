@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import PropTypes from 'prop-types';
 
 const Header = ({ city, theme, toggleDarkMode, darkMode, setDarkMode }) => {
   const getTimeOfDay = () => {
@@ -10,15 +11,23 @@ const Header = ({ city, theme, toggleDarkMode, darkMode, setDarkMode }) => {
   };
 
   useEffect(() => {
+    let isSubscribed = true;
+
     const updateDarkMode = () => {
       const hour = new Date().getHours();
       const shouldBeDark = hour >= 18 || hour < 6;
-      setDarkMode(shouldBeDark);
+      if (isSubscribed) {
+        setDarkMode(shouldBeDark);
+      }
     };
 
     updateDarkMode();
     const interval = setInterval(updateDarkMode, 60000);
-    return () => clearInterval(interval);
+
+    return () => {
+      isSubscribed = false;
+      clearInterval(interval);
+    };
   }, [setDarkMode]);
 
   return (
@@ -84,6 +93,18 @@ const Header = ({ city, theme, toggleDarkMode, darkMode, setDarkMode }) => {
       </div>
     </div>
   );
+};
+
+Header.propTypes = {
+  city: PropTypes.string,
+  theme: PropTypes.object.isRequired,
+  toggleDarkMode: PropTypes.func.isRequired,
+  darkMode: PropTypes.bool.isRequired,
+  setDarkMode: PropTypes.func.isRequired,
+};
+
+Header.defaultProps = {
+  city: 'Weather App',
 };
 
 export default Header; 

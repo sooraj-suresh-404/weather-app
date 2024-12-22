@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import axios from "axios";
 import Header from './Header';
 import SearchBar from './SearchBar';
@@ -7,6 +7,7 @@ import ForecastCard from './ForecastCard';
 import Welcome from './Welcome';
 import { getWeatherTheme } from '../utils/weatherThemes';
 import Modal from './Modal';
+import PropTypes from 'prop-types';
 
 const WeatherApp = () => {
   const [weather, setWeather] = useState(null);
@@ -20,7 +21,7 @@ const WeatherApp = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showWelcomeModal, setShowWelcomeModal] = useState(true);
 
-  const API_KEY = "3e954c0127513176e8470a6c4308f6b1";
+  const API_KEY = process.env.REACT_APP_WEATHER_API_KEY || "3e954c0127513176e8470a6c4308f6b1";
 
   const processHourlyForecast = (data) => {
     // Get current hour
@@ -125,12 +126,21 @@ const WeatherApp = () => {
 
   const fetchWeatherByCity = async (cityName) => {
     try {
+      if (!API_KEY) {
+        setError("API key not found. Please check environment configuration.");
+        return;
+      }
+
+      if (!cityName?.trim()) {
+        setError("Please enter a city name");
+        return;
+      }
+
       setError(null);
       setIsLoading(true);
       
-      // Get current weather
       const weatherResponse = await axios.get(
-        `https://api.openweathermap.org/data/2.5/weather?q=${cityName}&units=metric&appid=${API_KEY}`
+        `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(cityName)}&units=metric&appid=${API_KEY}`
       );
       setWeather(weatherResponse.data);
 
@@ -151,9 +161,11 @@ const WeatherApp = () => {
     } catch (err) {
       console.error('Error fetching weather data:', err);
       setError(
-        err.response?.status === 404 
-          ? `City "${cityName}" not found. Please try another location.`
-          : "Unable to fetch weather data. Please try again later."
+        !API_KEY ? "API key not found. Please check environment configuration." :
+        err.response?.status === 404 ? `City "${cityName}" not found. Please try another location.` :
+        err.response?.status === 401 ? "API key invalid. Please check configuration." :
+        err.response?.status === 429 ? "Too many requests. Please try again later." :
+        "Unable to fetch weather data. Please try again later."
       );
       setWeather(null);
       setForecast(null);
@@ -168,6 +180,21 @@ const WeatherApp = () => {
       fetchWeatherByCity(city);
     }
   }, [city]);
+
+  useEffect(() => {
+    return () => {
+      setIsLoading(false);
+      setError(null);
+    };
+  }, []);
+
+  useEffect(() => {
+    // Check if API key is available
+    if (!API_KEY) {
+      setError("API key not found. Please check environment configuration.");
+      return;
+    }
+  }, []);
 
   const handleGetLocation = () => {
     if (navigator.geolocation) {
@@ -224,8 +251,13 @@ const WeatherApp = () => {
 
   const theme = getThemeWithDarkMode();
 
+  const memoizedTheme = useMemo(() => 
+    getThemeWithDarkMode(), 
+    [weather?.weather[0]?.icon, darkMode]
+  );
+
   return (
-    <div className={`min-h-screen w-full bg-gradient-to-br ${theme.gradient} text-white overflow-hidden`}>
+    <div className={`min-h-screen w-full bg-gradient-to-br ${memoizedTheme.gradient} text-white overflow-hidden`}>
       <Modal 
         isOpen={showWelcomeModal}
         theme={theme}
@@ -358,7 +390,7 @@ const WeatherApp = () => {
                       <WeatherInfoCard 
                         title="Pressure" 
                         value={`${weather.main.pressure} hPa`}
-                        icon="���️"
+                        icon="🌡️"
                         theme={theme}
                       />
                       <WeatherInfoCard 
@@ -390,5 +422,12 @@ const WeatherInfoCard = ({ title, value, icon, theme }) => (
     <p className="text-2xl font-bold">{value}</p>
   </div>
 );
+
+WeatherInfoCard.propTypes = {
+  title: PropTypes.string.isRequired,
+  value: PropTypes.string.isRequired,
+  icon: PropTypes.string.isRequired,
+  theme: PropTypes.object.isRequired,
+};
 
 export default WeatherApp;

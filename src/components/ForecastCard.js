@@ -1,4 +1,5 @@
 import React from 'react';
+import PropTypes from 'prop-types';
 
 const ForecastCard = ({ forecast, theme }) => {
   const getDayName = (dateStr) => {
@@ -74,6 +75,29 @@ const ForecastCard = ({ forecast, theme }) => {
       </div>
     </div>
   );
+};
+
+ForecastCard.propTypes = {
+  forecast: PropTypes.arrayOf(
+    PropTypes.shape({
+      dt_txt: PropTypes.string.isRequired,
+      main: PropTypes.shape({
+        temp: PropTypes.number.isRequired,
+        humidity: PropTypes.number.isRequired,
+      }).isRequired,
+      weather: PropTypes.arrayOf(
+        PropTypes.shape({
+          description: PropTypes.string.isRequired,
+          icon: PropTypes.string.isRequired,
+        })
+      ).isRequired,
+    })
+  ),
+  theme: PropTypes.object.isRequired,
+};
+
+ForecastCard.defaultProps = {
+  forecast: [],
 };
 
 export default ForecastCard; 
