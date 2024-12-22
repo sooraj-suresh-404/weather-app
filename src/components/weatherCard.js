@@ -140,7 +140,20 @@ const WeatherApp = () => {
 
   const toggleDarkMode = () => setDarkMode(!darkMode);
 
-  const theme = weather ? getWeatherTheme(weather.weather[0].icon) : getWeatherTheme('01d');
+  const getThemeWithDarkMode = () => {
+    const baseTheme = weather ? getWeatherTheme(weather.weather[0].icon) : getWeatherTheme('01d');
+    if (darkMode) {
+      return {
+        ...baseTheme,
+        gradient: 'from-gray-900 to-gray-800',
+        accent: 'bg-gray-800/30',
+        pattern: 'bg-opacity-30'
+      };
+    }
+    return baseTheme;
+  };
+
+  const theme = getThemeWithDarkMode();
 
   return (
     <div className={`min-h-screen w-full bg-gradient-to-br ${theme.gradient} text-white overflow-hidden`}>
@@ -164,33 +177,35 @@ const WeatherApp = () => {
           </div>
         </div>
 
-        <div className="max-w-7xl mx-auto">
-          {/* Top Section */}
-          <div className="relative z-10 max-w-xl mx-auto mb-12">
+        <div className="max-w-7xl mx-auto space-y-8">
+          {/* Header Section */}
+          <div className="space-y-6">
             <Header 
               city={weather?.name} 
               theme={theme} 
               toggleDarkMode={toggleDarkMode} 
-              darkMode={darkMode} 
+              darkMode={darkMode}
+              setDarkMode={setDarkMode}
             />
-            
-            <div className="mt-6">
+
+            {/* Search Bar */}
+            <div className="max-w-xl mx-auto">
               <SearchBar 
-                query={query} 
-                setQuery={setQuery} 
-                handleSearch={handleSearch} 
-                theme={theme} 
+                query={query}
+                setQuery={setQuery}
+                handleSearch={handleSearch}
+                theme={theme}
               />
             </div>
 
             {error && (
-              <div className="mt-4 px-4 py-3 rounded-lg bg-red-500/20 text-white text-center">
+              <div className="max-w-xl mx-auto px-4 py-3 rounded-lg bg-red-500/20 text-white text-center">
                 {error}
               </div>
             )}
 
             {isLoading && (
-              <div className="flex justify-center mt-4">
+              <div className="flex justify-center">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
               </div>
             )}
@@ -274,7 +289,7 @@ const WeatherApp = () => {
                       <WeatherInfoCard 
                         title="Pressure" 
                         value={`${weather.main.pressure} hPa`}
-                        icon="🌡��"
+                        icon="🌡️"
                         theme={theme}
                       />
                       <WeatherInfoCard 
