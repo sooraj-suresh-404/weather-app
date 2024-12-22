@@ -35,27 +35,70 @@ const WeatherApp = () => {
       }));
   };
 
+  const processDailyForecast = (data, historicalData) => {
+    const dailyData = {};
+    
+    // Add yesterday's data if available
+    if (historicalData) {
+      const yesterdayDate = new Date();
+      yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+      const yesterdayKey = yesterdayDate.toLocaleDateString();
+      
+      dailyData[yesterdayKey] = {
+        dt: historicalData.current.dt,
+        dt_txt: yesterdayDate.toISOString(),
+        main: {
+          temp: historicalData.current.temp,
+          temp_min: historicalData.current.temp,
+          temp_max: historicalData.current.temp,
+          humidity: historicalData.current.humidity
+        },
+        weather: historicalData.current.weather,
+        wind: {
+          speed: historicalData.current.wind_speed
+        }
+      };
+    }
+    
+    // Process current and future forecast data
+    data.list.forEach(item => {
+      const date = new Date(item.dt * 1000).toLocaleDateString();
+      if (!dailyData[date]) {
+        dailyData[date] = {
+          ...item,
+          temp_min: item.main.temp,
+          temp_max: item.main.temp
+        };
+      } else {
+        dailyData[date].temp_min = Math.min(dailyData[date].temp_min, item.main.temp);
+        dailyData[date].temp_max = Math.max(dailyData[date].temp_max, item.main.temp);
+      }
+    });
+
+    // Convert to array and take first 5 days
+    return Object.values(dailyData).slice(0, 5);
+  };
+
   const fetchWeatherData = async (latitude, longitude) => {
     try {
       setError(null);
       setIsLoading(true);
 
-      // Fetch current weather by coordinates
       const weatherResponse = await axios.get(
         `https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&units=metric&appid=${API_KEY}`
       );
       setWeather(weatherResponse.data);
 
-      // Fetch forecast by coordinates
       const forecastResponse = await axios.get(
         `https://api.openweathermap.org/data/2.5/forecast?lat=${latitude}&lon=${longitude}&units=metric&appid=${API_KEY}`
       );
-      setForecast(forecastResponse.data.list.slice(0, 5));
-      setHourlyForecast(
-        forecastResponse.data.list.filter((item) =>
-          item.dt_txt.includes("12:00:00")
-        )
-      );
+      
+      // Process forecast data
+      const dailyForecast = processDailyForecast(forecastResponse.data);
+      const hourlyForecast = processHourlyForecast(forecastResponse.data);
+      
+      setForecast(dailyForecast);
+      setHourlyForecast(hourlyForecast);
     } catch (err) {
       console.error('Error fetching weather data:', err);
       setError("Unable to fetch weather data. Please try again later.");
@@ -64,21 +107,47 @@ const WeatherApp = () => {
     }
   };
 
+  const fetchHistoricalWeather = async (cityName) => {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const timestamp = Math.floor(yesterday.getTime() / 1000);
+
+    try {
+      const response = await axios.get(
+        `https://api.openweathermap.org/data/2.5/onecall/timemachine?lat=${weather.coord.lat}&lon=${weather.coord.lon}&dt=${timestamp}&units=metric&appid=${API_KEY}`
+      );
+      return response.data;
+    } catch (err) {
+      console.error('Error fetching historical data:', err);
+      return null;
+    }
+  };
+
   const fetchWeatherByCity = async (cityName) => {
     try {
       setError(null);
       setIsLoading(true);
       
+      // Get current weather
       const weatherResponse = await axios.get(
         `https://api.openweathermap.org/data/2.5/weather?q=${cityName}&units=metric&appid=${API_KEY}`
       );
       setWeather(weatherResponse.data);
 
+      // Get forecast
       const forecastResponse = await axios.get(
         `https://api.openweathermap.org/data/2.5/forecast?q=${cityName}&units=metric&appid=${API_KEY}`
       );
-      setForecast(forecastResponse.data.list.slice(0, 5));
-      setHourlyForecast(processHourlyForecast(forecastResponse.data));
+
+      // Get yesterday's weather if available
+      const historicalData = await fetchHistoricalWeather(cityName);
+      
+      // Process forecast data
+      const dailyForecast = processDailyForecast(forecastResponse.data, historicalData);
+      const hourlyForecast = processHourlyForecast(forecastResponse.data);
+      
+      setForecast(dailyForecast);
+      setHourlyForecast(hourlyForecast);
     } catch (err) {
       console.error('Error fetching weather data:', err);
       setError(
@@ -289,7 +358,7 @@ const WeatherApp = () => {
                       <WeatherInfoCard 
                         title="Pressure" 
                         value={`${weather.main.pressure} hPa`}
-                        icon="🌡️"
+                        icon="���️"
                         theme={theme}
                       />
                       <WeatherInfoCard 

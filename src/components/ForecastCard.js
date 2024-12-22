@@ -1,37 +1,79 @@
 import React from 'react';
 
-const ForecastCard = ({ forecast, theme }) => (
-  <div className={`${theme.accent} ${theme.pattern} rounded-3xl p-6 lg:p-8 h-full backdrop-blur-sm`}>
-    <h3 className="text-xl font-bold mb-4">5-Day Forecast</h3>
-    <div className="space-y-3 sm:space-y-4">
-      {forecast?.map((day, index) => (
-        <div 
-          key={index} 
-          className="flex items-center justify-between bg-white/10 rounded-xl p-3 sm:p-4"
-        >
-          <div className="flex items-center space-x-3 sm:space-x-4">
-            <img
-              src={`https://openweathermap.org/img/wn/${day.weather[0].icon}.png`}
-              alt="forecast"
-              className="w-10 h-10 sm:w-12 sm:h-12"
-            />
-            <div>
-              <p className="font-medium text-sm sm:text-base">
-                {new Date(day.dt_txt).toLocaleDateString('en-US', { weekday: 'long' })}
-              </p>
-              <p className="text-xs sm:text-sm opacity-75">{day.weather[0].description}</p>
+const ForecastCard = ({ forecast, theme }) => {
+  const getDayName = (dateStr) => {
+    const date = new Date(dateStr);
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    if (date.toDateString() === today.toDateString()) return 'Today';
+    if (date.toDateString() === yesterday.toDateString()) return 'Yesterday';
+    return date.toLocaleDateString('en-US', { weekday: 'long' });
+  };
+
+  const getUniqueForecasts = () => {
+    const uniqueDays = {};
+    forecast?.forEach(item => {
+      const day = new Date(item.dt_txt).toLocaleDateString();
+      if (!uniqueDays[day] || new Date(item.dt_txt).getHours() === 12) {
+        uniqueDays[day] = item;
+      }
+    });
+    return Object.values(uniqueDays).slice(0, 5);
+  };
+
+  const uniqueForecasts = getUniqueForecasts();
+
+  return (
+    <div className={`${theme.accent} ${theme.pattern} backdrop-blur-md rounded-3xl p-6`}>
+      <h3 className="text-xl font-semibold mb-4">5-Day Forecast</h3>
+      <div className="divide-y divide-white/10">
+        {uniqueForecasts.map((day, index) => (
+          <div 
+            key={index}
+            className="flex items-center justify-between py-4 first:pt-0 last:pb-0 
+              hover:bg-white/10 rounded-xl transition-all duration-300 px-4 -mx-4
+              cursor-pointer transform hover:scale-[1.02]"
+          >
+            <div className="flex items-center gap-4">
+              <img
+                src={`https://openweathermap.org/img/wn/${day.weather[0].icon}@2x.png`}
+                alt="forecast"
+                className="w-12 h-12 transition-transform duration-300 group-hover:scale-110"
+              />
+              <div>
+                <p className="font-medium text-lg">
+                  {index === 0 ? 'Today' : getDayName(day.dt_txt)}
+                </p>
+                <p className="text-sm text-white/70 capitalize">
+                  {day.weather[0].description}
+                </p>
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="flex items-center gap-2">
+                <span className="text-xl font-bold">
+                  {Math.round(day.main.temp_max)}°
+                </span>
+                <span className="text-white/70">
+                  {Math.round(day.main.temp_min)}°
+                </span>
+              </div>
+              <div className="flex items-center gap-3 text-sm text-white/70 mt-1">
+                <span className="flex items-center gap-1">
+                  💧 {day.main.humidity}%
+                </span>
+                <span className="flex items-center gap-1">
+                  💨 {Math.round(day.wind.speed)}m/s
+                </span>
+              </div>
             </div>
           </div>
-          <div className="text-right">
-            <p className="text-xl sm:text-2xl font-bold">{Math.round(day.main.temp)}°</p>
-            <p className="text-xs sm:text-sm opacity-75">
-              H:{Math.round(day.main.temp_max)}° L:{Math.round(day.main.temp_min)}°
-            </p>
-          </div>
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 export default ForecastCard; 
